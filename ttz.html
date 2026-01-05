@@ -1,0 +1,703 @@
+<meta name='viewport' content='width=device-width, initial-scale=1'/><!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dart Scoring App</title>
+<style>
+  :root {
+    --bg-dark: #0f121f;
+    --bg-dark-alt: #1a1e35;
+    --text-light: #eee;
+    --accent-red: #ff3b3b;
+    --accent-blue: #6060ff;
+    --button-bg: #232946;
+    --button-hover: #2a2f52;
+    --button-active: #1a1e35;
+  }
+  body {
+    margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: var(--bg-dark);
+    color: var(--text-light);
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  /* --- Setup Screen --- */
+  #setupScreen {
+    flex: 1;
+    display: flex; flex-direction: column;
+    max-width: 480px;
+    margin: auto; padding: 20px;
+    background: var(--bg-dark-alt);
+    border-radius: 12px;
+    box-shadow: 0 0 12px var(--accent-red);
+  }
+  #setupScreen h2 {
+    border-left: 5px solid var(--accent-red);
+    padding-left: 12px;
+    margin-bottom: 12px;
+  }
+  .config-row {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+  .config-block {
+    flex: 1 1 120px;
+    background: var(--button-bg);
+    border-radius: 12px;
+    padding: 8px 12px;
+  }
+  .config-block label {
+    font-size: 0.75rem;
+    color: #999;
+    display: block;
+    margin-bottom: 6px;
+  }
+  .num-control {
+    display: flex; justify-content: center; align-items: center;
+    gap: 12px;
+  }
+  .num-control button {
+    background: var(--button-hover);
+    border: none;
+    color: var(--text-light);
+    font-weight: 700;
+    font-size: 1.4rem;
+    padding: 6px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.3s;
+  }
+  .num-control button:hover {
+    background: var(--button-active);
+  }
+  .num-display {
+    font-size: 1.2rem;
+    width: 32px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .toggle-group {
+    display: flex; gap: 6px;
+  }
+  .toggle-btn {
+    flex: 1;
+    background: var(--button-bg);
+    border-radius: 12px;
+    padding: 8px 12px;
+    text-align: center;
+    color: #aaa;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.3s, color 0.3s;
+    border: 2px solid transparent;
+  }
+  .toggle-btn.selected {
+    background: var(--accent-red);
+    color: white;
+    box-shadow: 0 0 10px var(--accent-red);
+    border-color: var(--accent-red);
+  }
+  #playersList {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .player-item {
+    flex: 1 1 45%;
+    background: var(--button-bg);
+    border-radius: 12px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: #ddd;
+  }
+  .player-item input {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    font-weight: 600;
+    font-size: 1rem;
+    width: 100%;
+    outline: none;
+    cursor: text;
+  }
+  #startBtn {
+    margin-top: 24px;
+    background: var(--accent-red);
+    border: none;
+    padding: 14px;
+    color: white;
+    font-weight: 800;
+    font-size: 1.3rem;
+    border-radius: 14px;
+    cursor: pointer;
+    box-shadow: 0 0 15px var(--accent-red);
+    transition: background 0.3s ease;
+  }
+  #startBtn:hover {
+    background: #ee2a2a;
+  }
+  /* --- Game Screen --- */
+  #app {
+    flex: 1;
+    max-width: 480px;
+    margin: auto;
+    padding: 20px;
+    background: var(--bg-dark-alt);
+    border-radius: 12px;
+    display: none;
+    flex-direction: column;
+  }
+  #currentPlayer {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    margin-bottom: 12px;
+  }
+  .player-box {
+    flex: 1 1 22%;
+    background: var(--button-bg);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #bbb;
+    user-select: none;
+    position: relative;
+    transition: box-shadow 0.3s ease;
+  }
+  .player-box.active {
+    box-shadow: 0 0 14px 3px var(--accent-red);
+    color: white;
+  }
+  /* Score Display */
+  #scoreDisplay {
+    text-align: center;
+    margin-bottom: 20px;
+    user-select: none;
+  }
+  #scoreDisplay #rest {
+    font-size: 5rem;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  #scoreDisplay #playerName {
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--accent-red);
+  }
+  #throwsDisplay {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    font-weight: 700;
+    font-size: 2rem;
+    color: #bbb;
+    margin-bottom: 20px;
+  }
+  /* Pad */
+  #pad {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+  #pad button {
+    background: var(--button-bg);
+    color: var(--text-light);
+    font-weight: 700;
+    font-size: 1.2rem;
+    border-radius: 12px;
+    padding: 14px 0;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease, transform 0.1s ease;
+    border: none;
+  }
+  #pad button:active {
+    transform: translateY(2px);
+    background: var(--button-active);
+  }
+  #pad button.mod {
+    color: var(--accent-red);
+    font-weight: 800;
+  }
+  #pad button.mod.selected-multiplier {
+    background: var(--accent-red);
+    color: white;
+    box-shadow: 0 0 10px var(--accent-red);
+  }
+  #pad button.throw-btn {
+    grid-column: span 6;
+    background: var(--accent-red);
+    color: white;
+    font-weight: 900;
+    font-size: 1.4rem;
+  }
+  /* Scrollbar for players */
+  #currentPlayer::-webkit-scrollbar {
+    height: 8px;
+  }
+  #currentPlayer::-webkit-scrollbar-thumb {
+    background: var(--accent-red);
+    border-radius: 6px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Setup Screen -->
+<div id="setupScreen">
+  <h2>Spiel Konfiguration</h2>
+  <div class="config-row">
+    <div class="config-block">
+      <label>Anzahl Sets</label>
+      <div class="num-control">
+        <button id="setsMinus">-</button>
+        <div class="num-display" id="setsDisplay">1</div>
+        <button id="setsPlus">+</button>
+      </div>
+    </div>
+    <div class="config-block">
+      <label>Anzahl Legs pro Set</label>
+      <div class="num-control">
+        <button id="legsMinus">-</button>
+        <div class="num-display" id="legsDisplay">2</div>
+        <button id="legsPlus">+</button>
+      </div>
+    </div>
+    <div class="config-block" style="flex:1.5">
+      <label>Spielmodus (Punkte)</label>
+      <div class="toggle-group" id="pointsMode">
+        <div class="toggle-btn selected" data-value="501">501</div>
+        <div class="toggle-btn" data-value="301">301</div>
+        <div class="toggle-btn" data-value="101">101</div>
+      </div>
+    </div>
+  </div>
+  <div class="config-row" style="gap:12px;">
+    <div class="config-block" style="flex:1.2">
+      <label>Checkout Modus</label>
+      <div class="toggle-group" id="checkoutMode">
+        <div class="toggle-btn" data-value="single">Single Out</div>
+        <div class="toggle-btn selected" data-value="double">Double Out</div>
+      </div>
+    </div>
+    <div class="config-block" style="flex:1.2">
+      <label>Spielmodus (Distanz)</label>
+      <div class="toggle-group" id="distanceMode">
+        <div class="toggle-btn selected" data-value="firstTo">First To</div>
+        <div class="toggle-btn" data-value="bestOf">Best Of</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Spieler</h2>
+  <div id="playersList">
+    <!-- Spieler Eingaben werden hier dynamisch erzeugt -->
+  </div>
+  <div style="margin-top: 10px; font-size: 0.9rem; color: #bbb;">
+    Spieleranzahl:
+    <button id="playerMinus">-</button>
+    <span id="playerCount">2</span>
+    <button id="playerPlus">+</button>
+  </div>
+
+  <button id="startBtn">Spiel starten</button>
+</div>
+
+<!-- Spiel Bildschirm -->
+<div id="app">
+  <div id="currentPlayer"></div>
+  <div id="scoreDisplay">
+    <div id="rest">501</div>
+    <div id="playerName">Spieler 1</div>
+  </div>
+  <div id="throwsDisplay">
+    <div id="t1">–</div>
+    <div id="t2">–</div>
+    <div id="t3">–</div>
+  </div>
+  <div id="pad"></div>
+</div>
+
+<script>
+  // --- Setup Screen Logic ---
+  const setsMinus = document.getElementById('setsMinus');
+  const setsPlus = document.getElementById('setsPlus');
+  const setsDisplay = document.getElementById('setsDisplay');
+
+  const legsMinus = document.getElementById('legsMinus');
+  const legsPlus = document.getElementById('legsPlus');
+  const legsDisplay = document.getElementById('legsDisplay');
+
+  const pointsMode = document.getElementById('pointsMode');
+  const checkoutMode = document.getElementById('checkoutMode');
+  const distanceMode = document.getElementById('distanceMode');
+
+  const playersList = document.getElementById('playersList');
+  const playerMinus = document.getElementById('playerMinus');
+  const playerPlus = document.getElementById('playerPlus');
+  const playerCountDisplay = document.getElementById('playerCount');
+
+  const startBtn = document.getElementById('startBtn');
+
+  let sets = 1;
+  let legs = 2;
+  let points = 501;
+  let checkout = 'double';
+  let distance = 'firstTo';
+  let playerCount = 2;
+
+  function createPlayerInputs(count) {
+    playersList.innerHTML = '';
+    for(let i=1; i<=count; i++) {
+      const div = document.createElement('div');
+      div.className = 'player-item';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = `Spieler ${i}`;
+      input.maxLength = 15;
+      input.oninput = () => {
+        players[i-1].name = input.value.trim() || `Spieler ${i}`;
+        renderPlayers();
+      };
+      div.appendChild(input);
+      playersList.appendChild(div);
+    }
+  }
+
+  let players = [];
+  function createPlayersArray(count) {
+    players = [];
+    for(let i=0; i<count; i++) {
+      players.push({name: `Spieler ${i+1}`, score: points});
+    }
+  }
+
+  // Init Spieler
+  createPlayersArray(playerCount);
+  createPlayerInputs(playerCount);
+  playerCountDisplay.textContent = playerCount;
+
+  // Button Events Setup
+  setsMinus.onclick = () => {
+    if(sets > 1) sets--;
+    setsDisplay.textContent = sets;
+  };
+  setsPlus.onclick = () => {
+    if(sets < 10) sets++;
+    setsDisplay.textContent = sets;
+  };
+
+  legsMinus.onclick = () => {
+    if(legs > 1) legs--;
+    legsDisplay.textContent = legs;
+  };
+  legsPlus.onclick = () => {
+    if(legs < 10) legs++;
+    legsDisplay.textContent = legs;
+  };
+
+  // Toggle Buttons Generic
+  function setupToggleGroup(container, callback) {
+    container.querySelectorAll('.toggle-btn').forEach(btn => {
+      btn.onclick = () => {
+        container.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        callback(btn.dataset.value);
+      };
+    });
+  }
+  setupToggleGroup(pointsMode, val => points = parseInt(val));
+  setupToggleGroup(checkoutMode, val => checkout = val);
+  setupToggleGroup(distanceMode, val => distance = val);
+
+  // Spieleranzahl
+  playerMinus.onclick = () => {
+    if(playerCount > 1) {
+      playerCount--;
+      playerCountDisplay.textContent = playerCount;
+      createPlayersArray(playerCount);
+      createPlayerInputs(playerCount);
+    }
+  };
+  playerPlus.onclick = () => {
+    if(playerCount < 4) {
+      playerCount++;
+      playerCountDisplay.textContent = playerCount;
+      createPlayersArray(playerCount);
+      createPlayerInputs(playerCount);
+    }
+  };
+
+  // Spieler Darstellung im Spiel (oben)
+  function renderPlayers() {
+    const container = document.getElementById('currentPlayer');
+    container.innerHTML = '';
+    players.forEach((p, i) => {
+      const div = document.createElement('div');
+      div.className = 'player-box';
+      div.textContent = p.name;
+      div.id = 'player-' + i;
+      container.appendChild(div);
+    });
+  }
+
+  renderPlayers();
+
+  // --- Dart Spiel Logik ---
+  const dartApp = (function(){
+    let config;
+    let currentPlayerIndex = 0;
+    let currentScore;
+    let throws = [];
+    let multiplier = 1;
+    let selectedNumber = null;
+    const maxThrows = 3;
+
+    const playerNameEl = document.getElementById('playerName');
+    const restEl = document.getElementById('rest');
+    const throwEls = [
+      document.getElementById('t1'),
+      document.getElementById('t2'),
+      document.getElementById('t3'),
+    ];
+    const padEl = document.getElementById('pad');
+
+    const numbers = [1,2,3,4,5,6,7,8,9,10,
+                    11,12,13,14,15,16,17,18,19,20,25];
+
+    function init(cfg) {
+      config = cfg;
+      currentPlayerIndex = 0;
+      currentScore = config.players[0].score;
+      throws = [];
+      multiplier = 1;
+      selectedNumber = null;
+      renderUI();
+      updateActivePlayerUI();
+    }
+
+    function renderUI() {
+      playerNameEl.textContent = config.players[currentPlayerIndex].name;
+      restEl.textContent = currentScore;
+      clearThrows();
+      buildPad();
+      updateActivePlayerUI();
+    }
+
+    function clearThrows() {
+      throwEls.forEach(el => el.textContent = '–');
+      throws = [];
+    }
+
+    function buildPad() {
+      padEl.innerHTML = '';
+
+      numbers.forEach(num => {
+        const btn = document.createElement('button');
+        btn.textContent = num.toString();
+        btn.className = '';
+        btn.dataset.value = num;
+        btn.onclick = () => {
+          selectedNumber = num;
+          updateThrowPreview();
+        };
+        padEl.appendChild(btn);
+      });
+
+      // Double Button
+      const doubleBtn = document.createElement('button');
+      doubleBtn.textContent = 'Double';
+      doubleBtn.classList.add('mod');
+      doubleBtn.onclick = () => {
+        multiplier = (multiplier === 2) ? 1 : 2;
+        if(multiplier === 2) tripleBtn.classList.remove('selected-multiplier');
+        doubleBtn.classList.toggle('selected-multiplier', multiplier === 2);
+        updateThrowPreview();
+      };
+      padEl.appendChild(doubleBtn);
+
+      // Triple Button
+      const tripleBtn = document.createElement('button');
+      tripleBtn.textContent = 'Triple';
+      tripleBtn.classList.add('mod');
+      tripleBtn.onclick = () => {
+        multiplier = (multiplier === 3) ? 1 : 3;
+        if(multiplier === 3) doubleBtn.classList.remove('selected-multiplier');
+        tripleBtn.classList.toggle('selected-multiplier', multiplier === 3);
+        updateThrowPreview();
+      };
+      padEl.appendChild(tripleBtn);
+
+      // Throw Button
+      const throwBtn = document.createElement('button');
+      throwBtn.textContent = 'Wurf';
+      throwBtn.classList.add('throw-btn');
+      throwBtn.onclick = () => {
+        if(selectedNumber === null) {
+          alert('Bitte eine Zahl auswählen!');
+          return;
+        }
+        addThrow(selectedNumber, multiplier);
+      };
+      padEl.appendChild(throwBtn);
+    }
+
+    function updateThrowPreview() {
+      for(let i=0; i<3; i++) {
+        throwEls[i].textContent = '–';
+      }
+      if(selectedNumber !== null) {
+        const text = (multiplier === 1) ? `${selectedNumber}` :
+          (multiplier === 2) ? `D${selectedNumber}` : `T${selectedNumber}`;
+        throwEls[throws.length].textContent = text;
+      }
+    }
+
+    function addThrow(number, mult) {
+      const val = number * mult;
+      let newScore = currentScore - val;
+
+      if(config.checkout === 'double') {
+        if(newScore === 0) {
+          if(mult !== 2) {
+            alert('Letzter Wurf muss Double sein für Checkout!');
+            updateThrowPreview();
+            return;
+          }
+          finishLeg();
+          return;
+        }
+        if(newScore < 0 || newScore === 1) {
+          alert('Bust! Score zurück auf vorherigen Wert.');
+          updateThrowPreview();
+          return;
+        }
+      } else {
+        if(newScore === 0) {
+          finishLeg();
+          return;
+        }
+        if(newScore < 0) {
+          alert('Bust! Score zurück auf vorherigen Wert.');
+          updateThrowPreview();
+          return;
+        }
+      }
+
+      currentScore = newScore;
+      config.players[currentPlayerIndex].score = currentScore; // Score speichern
+
+      throws.push({ number, mult, val });
+
+      const text = (mult === 1) ? `${number}` :
+                   (mult === 2) ? `D${number}` :
+                   `T${number}`;
+      throwEls[throws.length - 1].textContent = text;
+
+      selectedNumber = null;
+      multiplier = 1;
+      padEl.querySelectorAll('.mod').forEach(b => b.classList.remove('selected-multiplier'));
+
+      restEl.textContent = currentScore;
+
+      announceScore(val);
+
+      if(throws.length >= maxThrows) {
+        nextPlayer();
+      }
+    }
+
+    function nextPlayer() {
+      throws = [];
+      selectedNumber = null;
+      multiplier = 1;
+      currentPlayerIndex++;
+      if(currentPlayerIndex >= config.players.length) {
+        currentPlayerIndex = 0;
+      }
+      currentScore = config.players[currentPlayerIndex].score; // Score des nächsten Spielers holen
+      renderUI();
+      updateActivePlayerUI();
+      announcePlayerTurn(config.players[currentPlayerIndex].name);
+    }
+
+    function finishLeg() {
+      alert(`${config.players[currentPlayerIndex].name} hat das Leg gewonnen!`);
+      // Leg zurücksetzen oder Set-Logik hier einfügen
+      config.players.forEach(p => p.score = points);
+      currentScore = points;
+      throws = [];
+      selectedNumber = null;
+      multiplier = 1;
+      renderUI();
+    }
+
+    // Aktiven Spieler optisch markieren
+    function updateActivePlayerUI() {
+      players.forEach((p, i) => {
+        const el = document.getElementById('player-' + i);
+        if(el) {
+          if(i === currentPlayerIndex) {
+            el.classList.add('active');
+          } else {
+            el.classList.remove('active');
+          }
+        }
+      });
+    }
+
+    // Ansage Funktionen
+    function announceScore(score) {
+      if('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(score.toString());
+        utter.lang = 'de-DE';
+        window.speechSynthesis.speak(utter);
+      }
+    }
+    function announcePlayerTurn(name) {
+      if('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(`Spieler ${name} ist dran`);
+        utter.lang = 'de-DE';
+        window.speechSynthesis.speak(utter);
+      }
+    }
+
+    return { init };
+  })();
+
+  startBtn.onclick = () => {
+    // Spieler Namen aus Inputs übernehmen
+    const inputs = playersList.querySelectorAll('input');
+    inputs.forEach((input, i) => {
+      players[i].name = input.value.trim() || `Spieler ${i+1}`;
+    });
+    if(players.length < 1) {
+      alert('Bitte mindestens 1 Spieler hinzufügen.');
+      return;
+    }
+    // Config an Dart App übergeben
+    const config = {
+      sets,
+      legs,
+      points,
+      checkout,
+      distance,
+      players,
+    };
+    document.getElementById('setupScreen').style.display = 'none';
+    const app = document.getElementById('app');
+    app.style.display = 'flex';
+    dartApp.init(config);
+  };
+</script>
+
+</body>
+</html>
